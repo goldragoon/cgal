@@ -19,15 +19,54 @@
 //#define CGAL_TRIANGULATION_3_VERBOSE_TRAVERSER_EXAMPLE
 
 // Define the kernel.
-typedef CGAL::Exact_predicates_inexact_constructions_kernel     Kernel;
-typedef Kernel::Point_3                                         Point_3;
+typedef CGAL::Exact_predicates_inexact_constructions_kernel  Kernel;
+typedef Kernel::Point_3                                      Point_3;
 
 // Define the structure.
-typedef CGAL::Delaunay_triangulation_3< Kernel >                DT;
+typedef CGAL::Delaunay_triangulation_3< Kernel >    DT;
+typedef DT::Cell_handle                             Cell_handle;
+typedef DT::Vertex_handle                           Vertex_handle;
 
-typedef DT::Cell_handle                                         Cell_handle;
+typedef CGAL::Triangulation_segment_cell_iterator_3<DT> Cell_traverser;
 
-typedef CGAL::Triangulation_segment_cell_iterator_3< DT >       Cell_traverser;
+template <typename PointVector>
+void scale_points(PointVector& points, const double scale)
+{
+  //bbox
+  double xmin = points[0].x();
+  double xmax = points[0].x();
+  double ymin = points[0].y();
+  double ymax = points[0].y();
+  double zmin = points[0].z();
+  double zmax = points[0].z();
+
+  BOOST_FOREACH(Point_3 p, points)
+  {
+    xmin = (std::min)(xmin, p.x());
+    ymin = (std::min)(ymin, p.y());
+    zmin = (std::min)(zmin, p.z());
+    xmax = (std::max)(xmax, p.x());
+    ymax = (std::max)(ymax, p.y());
+    zmax = (std::max)(zmax, p.z());
+  }
+  std::cout << "Bbox is [" << xmin << "; " << xmax << "] "
+    << "[" << ymin << "; " << ymax << "] "
+    << "[" << zmin << "; " << zmax << "]" << std::endl;
+
+  double dx = xmax - xmin;
+  double dy = ymax - ymin;
+  double dz = zmax - zmin;
+
+  for (std::size_t i = 0; i < points.size(); ++i)
+  {
+    const Point_3 pi = points[i];
+    double nx = (pi.x() - xmin) * scale / dx;
+    double ny = (pi.y() - ymin) * scale / dy;
+    double nz = (pi.z() - zmin) * scale / dz;
+
+    points[i] = Point_3(nx, ny, nz);
+  }
+}
 
 int main(int argc, char* argv[])
 {
@@ -48,6 +87,8 @@ int main(int argc, char* argv[])
     return EXIT_FAILURE;
   }
 
+  scale_points(points, 100);
+
   //bbox
   double xmin = points[0].x();
   double xmax = points[0].x();
@@ -65,18 +106,53 @@ int main(int argc, char* argv[])
     ymax = (std::max)(ymax, p.y());
     zmax = (std::max)(zmax, p.z());
   }
+  std::cout << "Bbox is [" << xmin << "; " << xmax << "] "
+    << "[" << ymin << "; " << ymax << "] "
+    << "[" << zmin << "; " << zmax << "]" << std::endl;
 
     // Construct the Delaunay triangulation.
     DT dt( points.begin(), points.end() );
     assert( dt.is_valid() );
 
+    Vertex_handle v3 = dt.insert(Point_3(6, 6, 6));
+    Vertex_handle v4 = dt.insert(Point_3(10, 10, 10));
+
+    Cell_handle c;
+    int i, j;
+    if (dt.is_edge(v3, v4, c, i, j))
+    {
+      Point_3 p1(0, 0, 0);
+      Point_3 p2(24, 24, 24);
+
+      std::cout << "Traverser through v3 and v4" << std::endl;
+      Cell_traverser ct(dt, p1, p2);
+
+      unsigned int inf = 0, fin = 0;
+      for (; ct != ct.end(); ++ct)
+      {
+        if (dt.is_infinite(ct))
+          ++inf;
+        else
+        {
+          ++fin;
+          DT::Locate_type lt;
+          int li, lj;
+          ct.entry(lt, li, lj);
+          std::cout << "\t entry type : " << lt << std::endl;
+        }
+      }
+      std::cout << "Done : " << inf << " " << fin << std::endl;
+    }
+    else
+    {
+      std::cout << "[v3 ; v4] IS NOT AN EDGE" << std::endl;
+    }
     CGAL::default_random = CGAL::Random(0);
     CGAL::Random rng(0);
     CGAL::Timer time;
     time.start();
 
     unsigned int nb_facets = 0, nb_edges = 0, nb_vertex = 0;
-
     for (unsigned int i = 0; i < nb_seg; ++i)
     {
       // Construct a traverser.
