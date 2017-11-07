@@ -40,7 +40,8 @@ if ( CGAL_FOUND )
   create_single_source_cgal_program( "sequential_parallel.cpp" )
   create_single_source_cgal_program( "simple_triangulation_3.cpp" )
   create_single_source_cgal_program( "simplex.cpp" )
-
+  create_single_source_cgal_program( "triangulation_io.cpp" )
+  
 else()
   
     message(STATUS "This program requires the CGAL library, and will not be compiled.")
