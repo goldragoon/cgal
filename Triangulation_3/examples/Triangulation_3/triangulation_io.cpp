@@ -13,7 +13,7 @@ typedef CGAL::Triangulation_3<Epick> T3;
 
 int main(int argc, char* argv[])
 {
-  char* filename = (argc < 2) ? "data/anchor.mesh" : argv[1];
+  char* filename = (argc < 2) ? "data/sphere.mesh" : argv[1];
 
   std::ifstream ifs(filename);
   if (!ifs) return EXIT_FAILURE;

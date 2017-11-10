@@ -24,6 +24,9 @@
 #include <CGAL/license/Triangulation.h>
 
 #include <CGAL/Triangulation_3.h>
+#include <CGAL/Mesh_3/tet_soup_to_c3t3.h>
+
+
 #include <sstream>
 #include <iostream>
 
@@ -34,7 +37,10 @@ namespace CGAL {
   import_triangulation_3_from_mesh(std::istream & is,
                                    Triangulation_3<GT, TDS> & tr)
   {
-    //todo
+    typedef Triangulation_3<GT, TDS> Tr;
+    CGAL::build_triangulation_from_file<Tr, true>(is, tr);
+
+    assert(tr.is_valid());
 
     return is;
   }
