@@ -49,7 +49,7 @@ void build_vertices(Tr& tr,
   typedef typename Tr::Vertex_handle            Vertex_handle;
 
   vertex_handle_vector[0] = tr.tds().create_vertex(); // creates the infinite vertex
-  tr.infinite_vertex() = vertex_handle_vector[0];
+  tr.set_infinite_vertex(vertex_handle_vector[0]);
   CGAL_assertion(vertex_handle_vector[0] == tr.infinite_vertex());
 
   // build vertices
