@@ -38,7 +38,7 @@ namespace CGAL {
                                    Triangulation_3<GT, TDS> & tr)
   {
     typedef Triangulation_3<GT, TDS> Tr;
-    CGAL::build_triangulation_from_file<Tr, true>(is, tr);
+    CGAL::build_triangulation_from_file<Tr>(is, tr);
 
     assert(tr.is_valid());
 

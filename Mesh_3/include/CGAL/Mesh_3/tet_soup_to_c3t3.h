@@ -85,11 +85,11 @@ void add_facet_to_incident_cells_map(const typename Tr::Cell_handle c,
   f.insert(c->vertex((i + 1) % 4));
   f.insert(c->vertex((i + 2) % 4));
   f.insert(c->vertex((i + 3) % 4));
-  std::cout << "FACET is " << std::endl;
-  std::cout << "[" << i << "\t" << &*(c->vertex(i)) << "]" << std::endl;
-  std::cout << ((i + 1) % 4) << "\t" << &*(c->vertex((i + 1) % 4)) << std::endl;
-  std::cout << ((i + 2) % 4) << "\t" << &*(c->vertex((i + 2) % 4)) << std::endl;
-  std::cout << ((i + 3) % 4) << "\t" << &*(c->vertex((i + 3) % 4)) << std::endl;
+  //std::cout << "FACET is " << std::endl;
+  //std::cout << "[" << i << "\t" << &*(c->vertex(i)) << "]" << std::endl;
+  //std::cout << ((i + 1) % 4) << "\t" << &*(c->vertex((i + 1) % 4)) << std::endl;
+  //std::cout << ((i + 2) % 4) << "\t" << &*(c->vertex((i + 2) % 4)) << std::endl;
+  //std::cout << ((i + 3) % 4) << "\t" << &*(c->vertex((i + 3) % 4)) << std::endl;
 
   std::set<Vertex_handle> debug_v;
   debug_v.insert(c->vertex(0));
@@ -109,10 +109,10 @@ void add_facet_to_incident_cells_map(const typename Tr::Cell_handle c,
     CGAL_assertion(fit->second.size() == 1);
     fit->second.push_back(e);
 
-    std::vector<Incident_cell> vec2 = fit->second;
-    std::cout << &*vec2[0].first << "\t" << vec2[0].second << std::endl;
-    std::cout << &*vec2[1].first << "\t" << vec2[1].second << std::endl;
-    std::cout << &*e.first << "\t" << e.second << std::endl;
+    //std::vector<Incident_cell> vec2 = fit->second;
+    //std::cout << &*vec2[0].first << "\t" << vec2[0].second << std::endl;
+    //std::cout << &*vec2[1].first << "\t" << vec2[1].second << std::endl;
+    //std::cout << &*e.first << "\t" << e.second << std::endl;
   }
   else
   {
@@ -263,38 +263,37 @@ void build_infinite_cells(Tr& tr,
     int i = inc_to_f[0].second;
 
     std::set<Vertex_handle> debug_v;
-    bool f_infinite = false;
-    for (std::size_t i = 0; i < 4; ++i)
+    for (int i = 0; i < 4; ++i)
     {
-      if (c->vertex(i) == tr.infinite_vertex())
-      {
-        std::cout << "vertex " << i << " is INFINITE" << std::endl;
-        f_infinite = true;
-        break;
-      }
       debug_v.insert(c->vertex(i));
     }
-    if (f_infinite)
-      continue;
     if (debug_v.size() != 4)
     {
       std::cout << "C is degenerate!" << std::endl;
       std::cout << "i = " << i << std::endl;
+      CGAL_assertion(false);
     }
 
     Cell_handle opp_c;
     // the infinite cell that we are creating needs to be well oriented...1
-    int inf_vert_position_in_opp_c = 0;
-    if(i == 0 || i == 2)
-      opp_c = tr.tds().create_cell(tr.infinite_vertex(),
-                                   c->vertex((i+1)%4),
-                                   c->vertex((i+2)%4),
-                                   c->vertex((i+3)%4));
+    int inf_vert_position_in_opp_c = -1;
+    if (i == 0 || i == 2)
+    {
+      inf_vert_position_in_opp_c = 1;
+      opp_c = tr.tds().create_cell(c->vertex((i + 3) % 4),
+        tr.infinite_vertex(),
+        c->vertex((i + 1) % 4),
+        c->vertex((i + 2) % 4));
+    }
     else
+    {
+      inf_vert_position_in_opp_c = 0;
       opp_c = tr.tds().create_cell(tr.infinite_vertex(),
-                                   c->vertex((i+1)%4),
-                                   c->vertex((i+3)%4),
-                                   c->vertex((i+2)%4));
+        c->vertex((i + 1) % 4),
+        c->vertex((i + 2) % 4),
+        c->vertex((i + 3) % 4));
+    }
+    infinite_cells.push_back(opp_c);
 
     debug_v.clear();
     debug_v.insert(opp_c->vertex(0));
@@ -331,8 +330,9 @@ void build_infinite_cells(Tr& tr,
   for (std::size_t i = 0; i < infinite_cells.size(); ++i)
   {
     Cell_handle cinf = infinite_cells[i];
-    CGAL_assertion(cinf->vertex(0) == tr.infinite_vertex());
-    add_infinite_facets_to_incident_cells_map<Tr>(cinf, 0, incident_cells_map);
+    int index = cinf->index(tr.infinite_vertex());
+    CGAL_assertion(cinf->vertex(index) == tr.infinite_vertex());
+    add_infinite_facets_to_incident_cells_map<Tr>(cinf, index, incident_cells_map);
   }
 }
 
@@ -348,10 +348,6 @@ bool assign_neighbors(Tr& tr,
   typedef std::pair<Cell_handle, int>                                Incident_cell;
   typedef boost::unordered_map<Facet, std::vector<Incident_cell> >  Incident_cells_map;
 
-  // 4 facets per cell, each facet shared by 2 cells
-//  if (incident_cells_map.size() != tr.number_of_cells() * 2)
-//    return false;
-
   typename Incident_cells_map::const_iterator icit = incident_cells_map.begin();
   for(; icit!=incident_cells_map.end(); ++icit)
   {
@@ -365,11 +361,15 @@ bool assign_neighbors(Tr& tr,
     int i1 = adjacent_cells[1].second;
 
     tr.tds().set_adjacency(c0, i0, c1, i1);
+
+    CGAL_assertion(c0->neighbor(i0) == c1);
+    CGAL_assertion(c1->neighbor(i1) == c0);
   }
+
   return true;
 }
 
-template<class Tr, bool c3t3_loader_failed>
+template<class Tr>
 bool build_triangulation(Tr& tr,
                          const std::vector<typename Tr::Point>& points,
                          const std::vector<boost::array<int,5> >& finite_cells,
@@ -411,17 +411,11 @@ bool build_triangulation(Tr& tr,
     std::cout << tr.number_of_cells() << " cells" << std::endl;
   }
   std::cout << tr.number_of_vertices() << " vertices" << std::endl;
-  if(c3t3_loader_failed)
-  {
-    return true;
-  }
-  else
-    return tr.is_valid(true);
+  return tr.is_valid(true);
 }
 
-template<class Tr, bool c3t3_loader_failed>
-bool build_triangulation_from_file(std::istream& is,
-                                   Tr& tr)
+template<class Tr>
+bool build_triangulation_from_file(std::istream& is, Tr& tr)
 {
   typedef typename Tr::Point                                  Point_3;
 
@@ -503,8 +497,7 @@ bool build_triangulation_from_file(std::istream& is,
     return false;
   }
 
-  bool is_well_built = build_triangulation<Tr, c3t3_loader_failed>(tr, points, finite_cells, border_facets);
-  return is_well_built;
+  return build_triangulation<Tr>(tr, points, finite_cells, border_facets);
 }
 
 }  // namespace CGAL
