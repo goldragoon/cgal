@@ -278,12 +278,54 @@ walk_to_next() {
                 walk_to_next_3_inf( inf );
             else
             {
-              const Simplex backup = _cur;
-              do {
-                walk_to_next_3();
-              } while (get<0>(_cur) != Cell_handle()//end
-                    && !get<0>(_cur)->has_vertex(_tr.infinite_vertex(), inf)
-                    && have_same_entry(backup, _cur));
+              bool changed_entry = false;
+              //copy _cur and _prev
+              Simplex tmp_prev = _prev;
+              Simplex tmp_cur  = _cur;
+              do
+              {
+                std::pair<Simplex, Simplex> p = walk_to_next_3(tmp_prev, tmp_cur);
+
+                if (get<0>(p.second) == Cell_handle())
+                {
+                  if (changed_entry)
+                  {
+                    //general case: when entry changes for the 2nd time,
+                    // it means the walk has went too far.
+                    _prev = tmp_prev; //before updating tmp_prev
+                    _cur = tmp_cur;   //before updating tmp_cur
+                    break;
+                  }
+                  else
+                  {
+                    //if entry has not changed yet,
+                    //it means we have actually reached end()
+                    _prev = p.first;
+                    _cur = p.second;
+                    break;
+                  }
+                }
+                else if(!have_same_entry(_cur/*member*/, p.second))
+                {
+                  if (changed_entry)
+                  {
+                    //general case: when entry changes for the 2nd time,
+                    // it means the walk has went too far.
+                    //tmp_prev and tmp_cur still have the latest values given
+                    //by walk_to_next_3 during previous loop
+                    _prev = tmp_prev; //before updating tmp_prev
+                    _cur = tmp_cur;   //before updating tmp_cur
+                    break;
+                  }
+                  else
+                    changed_entry = true;
+                }
+
+                tmp_prev = p.first;
+                tmp_cur  = p.second;
+
+              } while (get<0>(tmp_cur) != Cell_handle()//end
+                    && !get<0>(tmp_cur)->has_vertex(_tr.infinite_vertex(), inf));
             }
             break;
         }
