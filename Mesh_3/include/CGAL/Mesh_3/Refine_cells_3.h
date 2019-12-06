@@ -3,8 +3,8 @@
 //
 // This file is part of CGAL (www.cgal.org).
 //
-// $URL$
-// $Id$
+// $URL: https://github.com/CGAL/cgal/blob/releases/CGAL-5.0/Mesh_3/include/CGAL/Mesh_3/Refine_cells_3.h $
+// $Id: Refine_cells_3.h 254d60f 2019-10-19T15:23:19+02:00 Sébastien Loriot
 // SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-Commercial
 //
 // Author(s)     : Laurent Rineau, Stéphane Tayeb
@@ -871,27 +871,42 @@ update_star(const Vertex_handle& vertex)
 template<class Tr, class Cr, class MD, class C3T3_, class P_, class Ct, class C_>
 void
 Refine_cells_3<Tr,Cr,MD,C3T3_,P_,Ct,C_>::
-update_star_self(const Vertex_handle& vertex)
+update_star_self(const Vertex_handle& vv)
 {
   typedef std::vector<Cell_handle> Cells;
   typedef typename Cells::iterator Cell_iterator;
 
   // Get the star of v
   Cells incident_cells;
-  r_tr_.incident_cells(vertex, std::back_inserter(incident_cells));
+  r_tr_.incident_cells(vv, std::back_inserter(incident_cells));
 
   // Get subdomain index
-  Subdomain_index cells_subdomain = r_oracle_.subdomain_index(vertex->index());
+  Subdomain_index cells_subdomain = r_oracle_.subdomain_index(vv->index());
 
   // Restore surface & domain
   for( Cell_iterator cell_it = incident_cells.begin();
       cell_it != incident_cells.end();
       ++cell_it )
   {
+    Cell_handle c = *cell_it;
+    if (!r_tr_.is_infinite(c))
+    {
+
+      CGAL::dump_c3t3(r_c3t3_, "dump_before_crash");
+      std::cout << "vertex : " << vv->point() << std::endl;
+      std::cout << "cell   : "
+        << c->vertex(0)->point().point()
+        << " " << c->vertex(1)->point().point()
+        << " " << c->vertex(2)->point().point()
+        << " " << c->vertex(3)->point().point() << std::endl;
+
+      exit(0);
+    }
+
     CGAL_assertion(!r_tr_.is_infinite(*cell_it));
 
     // Restore surface
-    const int& k = (*cell_it)->index(vertex);
+    const int& k = (*cell_it)->index(vv);
     const Facet mirror_f = mirror_facet(*cell_it,k);
     const Cell_handle& neighbor_cell = mirror_f.first;
     const int& neighb_k = mirror_f.second;

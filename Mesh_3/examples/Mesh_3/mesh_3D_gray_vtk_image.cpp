@@ -1,4 +1,6 @@
 
+//#define CGAL_MESH_3_VERBOSE 1
+
 #include <vtkImageData.h>
 #include <vtkDICOMImageReader.h>
 #include <vtkImageReader.h>
@@ -14,6 +16,7 @@
 #include <CGAL/Labeled_mesh_domain_3.h>
 #include <CGAL/make_mesh_3.h>
 #include <CGAL/Image_3.h>
+#include <CGAL/ImageIO.h>
 #include <CGAL/read_vtk_image_data.h>
 
 #include <boost/lexical_cast.hpp>
@@ -32,16 +35,18 @@ typedef CGAL::Mesh_complex_3_in_triangulation_3<Tr> C3t3;
 // Criteria
 typedef CGAL::Mesh_criteria_3<Tr> Mesh_criteria;
 
-class Less {
+
+class Greater {
   double iso;
 public:
-  Less(double iso): iso(iso) {}
+  Greater(double iso) : iso(iso) {}
 
   template <typename T>
   int operator()(T v) const {
-    return int(v < iso);
+    return int(v > iso);
   }
 };
+
 
 int main(int argc, char* argv[])
 {
@@ -51,6 +56,10 @@ int main(int argc, char* argv[])
     return 0;
   }
 
+  std::cout << "Mesh " << argv[1] << std::endl;
+
+  CGAL::get_default_random() = CGAL::Random(0);
+
   Image_word_type iso = (argc>2)? boost::lexical_cast<Image_word_type>(argv[2]): 1;
   double fs = (argc>3)? boost::lexical_cast<double>(argv[3]): 1;
   double fd = (argc>4)? boost::lexical_cast<double>(argv[4]): 0.1;
@@ -58,7 +67,15 @@ int main(int argc, char* argv[])
   
   vtkDICOMImageReader*dicom_reader = vtkDICOMImageReader::New();
   dicom_reader->SetDirectoryName(argv[1]);
+ // dicom_reader->Update();
   
+//  vtkImageData* vtk_image1 = dicom_reader->GetOutput();
+//  vtk_image1->Print(std::cerr);
+
+//  CGAL::Image_3 image1 = CGAL::read_vtk_image_data(vtk_image1);
+//  int ret = _writeImage(image1.image(), "DICOM_before_smoothing.inr.gz");
+//  std::cout << "ret = " << ret << std::endl;
+
   vtkDemandDrivenPipeline*executive =
     vtkDemandDrivenPipeline::SafeDownCast(dicom_reader->GetExecutive());
   if (executive)
@@ -71,6 +88,8 @@ int main(int argc, char* argv[])
   smoother->SetInputConnection(dicom_reader->GetOutputPort());
   smoother->Update();
   vtkImageData* vtk_image = smoother->GetOutput();
+
+  //vtkImageData* vtk_image = dicom_reader->GetOutput();
   vtk_image->Print(std::cerr);
   
   CGAL::Image_3 image = CGAL::read_vtk_image_data(vtk_image);
@@ -78,14 +97,18 @@ int main(int argc, char* argv[])
     std::cerr << "could not create a CGAL::Image_3 from the vtk image\n";
     return 0;
   }
+
+  //ret = _writeImage(image.image(), "DICOM_after_smoothing.inr.gz");
+  //std::cout << "ret = " << ret << std::endl;
+
   /// [Domain creation]
   // To avoid verbose function and named parameters call
   using namespace CGAL::parameters;
 
   Mesh_domain domain = Mesh_domain::create_gray_image_mesh_domain
     (image,
-     image_values_to_subdomain_indices = Less(iso),
-     value_outside = 0);
+     image_values_to_subdomain_indices = Greater(iso),
+     value_outside = -1000);
   /// [Domain creation]
 
   // Mesh criteria
@@ -99,5 +122,7 @@ int main(int argc, char* argv[])
   std::ofstream medit_file("out.mesh");
   c3t3.output_to_medit(medit_file);
   
+  std::cout << "done" << std::endl;
+
   return 0;
 }
