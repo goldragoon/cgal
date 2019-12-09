@@ -889,9 +889,8 @@ update_star_self(const Vertex_handle& vv)
       ++cell_it )
   {
     Cell_handle c = *cell_it;
-    if (!r_tr_.is_infinite(c))
+    if (r_tr_.is_infinite(c))
     {
-
       CGAL::dump_c3t3(r_c3t3_, "dump_before_crash");
       std::cout << "vertex : " << vv->point() << std::endl;
       std::cout << "cell   : "
@@ -900,7 +899,7 @@ update_star_self(const Vertex_handle& vv)
         << " " << c->vertex(2)->point().point()
         << " " << c->vertex(3)->point().point() << std::endl;
 
-      exit(0);
+//      exit(0);
     }
 
     CGAL_assertion(!r_tr_.is_infinite(*cell_it));

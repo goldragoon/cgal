@@ -56,9 +56,11 @@ int main(int argc, char* argv[])
     return 0;
   }
 
-  std::cout << "Mesh " << argv[1] << std::endl;
-
   CGAL::get_default_random() = CGAL::Random(0);
+
+  std::cout << "Mesh " << argv[1] << std::endl;
+  std::cout << "\tSeed is\t"
+    << CGAL::get_default_random().get_seed() << std::endl;
 
   Image_word_type iso = (argc>2)? boost::lexical_cast<Image_word_type>(argv[2]): 1;
   double fs = (argc>3)? boost::lexical_cast<double>(argv[3]): 1;
@@ -67,14 +69,7 @@ int main(int argc, char* argv[])
   
   vtkDICOMImageReader*dicom_reader = vtkDICOMImageReader::New();
   dicom_reader->SetDirectoryName(argv[1]);
- // dicom_reader->Update();
-  
-//  vtkImageData* vtk_image1 = dicom_reader->GetOutput();
-//  vtk_image1->Print(std::cerr);
-
-//  CGAL::Image_3 image1 = CGAL::read_vtk_image_data(vtk_image1);
-//  int ret = _writeImage(image1.image(), "DICOM_before_smoothing.inr.gz");
-//  std::cout << "ret = " << ret << std::endl;
+//  dicom_reader->Update();
 
   vtkDemandDrivenPipeline*executive =
     vtkDemandDrivenPipeline::SafeDownCast(dicom_reader->GetExecutive());
@@ -82,15 +77,19 @@ int main(int argc, char* argv[])
     {
       executive->SetReleaseDataFlag(0, 0); // where 0 is the port index
     }
-  
+
+#if true
+  std::cout << "SMOOTH" << std::endl;
   vtkImageGaussianSmooth* smoother = vtkImageGaussianSmooth::New();
   smoother->SetStandardDeviations(1., 1., 1.);
   smoother->SetInputConnection(dicom_reader->GetOutputPort());
   smoother->Update();
   vtkImageData* vtk_image = smoother->GetOutput();
-
-  //vtkImageData* vtk_image = dicom_reader->GetOutput();
-  vtk_image->Print(std::cerr);
+#else
+  std::cout << "DONT'T SMOOTH" << std::endl;
+  vtkImageData* vtk_image = dicom_reader->GetOutput();
+#endif
+  //vtk_image->Print(std::cerr);
   
   CGAL::Image_3 image = CGAL::read_vtk_image_data(vtk_image);
   if(image.image() == 0){
@@ -98,8 +97,9 @@ int main(int argc, char* argv[])
     return 0;
   }
 
-  //ret = _writeImage(image.image(), "DICOM_after_smoothing.inr.gz");
-  //std::cout << "ret = " << ret << std::endl;
+//  bool ret = _writeImage(image.image(), "DICOM_before_smoothing.inr.gz");
+  //bool ret = _writeImage(image.image(), "DICOM_after_smoothing.inr.gz");
+//  std::cout << "ret = " << ret << std::endl;
 
   /// [Domain creation]
   // To avoid verbose function and named parameters call
@@ -108,7 +108,8 @@ int main(int argc, char* argv[])
   Mesh_domain domain = Mesh_domain::create_gray_image_mesh_domain
     (image,
      image_values_to_subdomain_indices = Greater(iso),
-     value_outside = -1000);
+     value_outside = -1000,
+      p_rng = &CGAL::get_default_random());
   /// [Domain creation]
 
   // Mesh criteria
@@ -116,7 +117,7 @@ int main(int argc, char* argv[])
                          cell_radius_edge_ratio=3, cell_size=cs);
   
   // Meshing
-  C3t3 c3t3 = CGAL::make_mesh_3<C3t3>(domain, criteria);
+  C3t3 c3t3 = CGAL::make_mesh_3<C3t3>(domain, criteria, no_perturb(), no_exude());
   
   // Output
   std::ofstream medit_file("out.mesh");
